@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TOP BRO — сервис онлайн-записи к мастерам</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+<!-- ШАПКА — повторяющийся элемент, единый для всех экранов -->
+<header class="header">
+  <div class="container header__inner">
+    <a href="#" class="logo" data-nav="landing">TOP<span>BRO</span></a>
+
+    <nav class="nav">
+      <a href="#services">Услуги</a>
+      <a href="#masters">Мастера</a>
+      <a href="#works">Работы</a>
+      <a href="#faq">Вопросы</a>
+      <a href="#contacts">Контакты</a>
+    </nav>
+
+    <div class="header__actions">
+      <span class="header__phone">+7 495 000-00-00</span>
+      <button class="btn btn--ghost" type="button">Войти</button>
+      <button class="btn btn--primary" type="button" data-go="booking">Записаться</button>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- ======================================================================
+     ЭКРАН 1 — ЛЕНДИНГ (опорный экран, задаёт стиль всего прототипа)
+     ====================================================================== -->
+<section class="screen is-active" id="screen-landing">
+
+  <div class="container">
+    <div class="hero">
+      <div>
+        <span class="eyebrow">Барбершоп · Москва</span>
+        <h1 class="hero__title">Запись к мастеру <em>за 30 секунд</em></h1>
+        <p class="hero__text">
+          Выберите услугу, мастера и удобное время. Без звонков и переписки —
+          свободные слоты видны сразу, запись подтверждается в один клик.
+        </p>
+
+        <div class="hero__actions">
+          <button class="btn btn--primary btn--lg" type="button" data-go="booking">Записаться онлайн</button>
+          <a class="btn btn--secondary btn--lg" href="#services">Смотреть услуги</a>
+        </div>
+
+        <div class="hero__facts">
+          <div class="hero__fact"><strong>3</strong><span>мастера в сети</span></div>
+          <div class="hero__fact"><strong>7 дней</strong><span>работаем без выходных</span></div>
+          <div class="hero__fact"><strong>10:00–22:00</strong><span>ежедневно</span></div>
+        </div>
+      </div>
+
+      <div class="hero__media placeholder">Фото мастера · плейсхолдер</div>
+      <div class="hero__price-tag">
+        <strong>от 1 800 ₽</strong>
+        <span>стрижка, борода, уход</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Услуги -->
+  <div class="section section--soft" id="services">
+    <div class="container">
+      <div class="section__head">
+        <span class="eyebrow">Услуги и цены</span>
+        <h2 class="section-title">Всё, что делаем</h2>
+        <p class="section-lead">Цены указаны за одну услугу. Стоимость визита рассчитывается автоматически при выборе.</p>
+      </div>
+
+      <div class="grid grid--3">
+        <article class="card card--hover service-card">
+          <div class="service-card__row">
+            <span class="service-card__name">Мужская стрижка</span>
+            <span class="service-card__price">2 500 ₽</span>
+          </div>
+          <p class="service-card__desc">Стрижка, мытьё и укладка. Форма подбирается под рост волос и тип головы.</p>
+          <div class="service-card__meta"><span>60 мин</span><span>все мастера</span></div>
+        </article>
+
+        <article class="card card--hover service-card">
+          <div class="service-card__row">
+            <span class="service-card__name">Стрижка и борода</span>
+            <span class="service-card__price">3 800 ₽</span>
+          </div>
+          <p class="service-card__desc">Комплексный визит: стрижка с укладкой и моделирование бороды с горячим полотенцем.</p>
+          <div class="service-card__meta"><span>90 мин</span><span>Артём, Даниил</span></div>
+        </article>
+
+        <article class="card card--hover service-card">
+          <div class="service-card__row">
+            <span class="service-card__name">Бритьё бороды</span>
+            <span class="service-card__price">1 800 ₽</span>
+          </div>
+          <p class="service-card__desc">Классическое или фигурное бритьё опасной бритвой с уходом за кожей.</p>
+          <div class="service-card__meta"><span>45 мин</span><span>все мастера</span></div>
+        </article>
+
+        <article class="card card--hover service-card">
+          <div class="service-card__row">
+            <span class="service-card__name">Камуфляж седины</span>
+            <span class="service-card__price">2 200 ₽</span>
+          </div>
+          <p class="service-card__desc">Мягкое тонирование без эффекта «покрашено». Стойкий цвет до 5 недель.</p>
+          <div class="service-card__meta"><span>60 мин</span><span>Илья, Даниил</span></div>
+        </article>
+
+        <article class="card card--hover service-card">
+          <div class="service-card__row">
+            <span class="service-card__name">Детская стрижка</span>
+            <span class="service-card__price">1 800 ₽</span>
+          </div>
+          <p class="service-card__desc">Для детей до 10 лет. Первая встреча — знакомство и подбор формы.</p>
+          <div class="service-card__meta"><span>45 мин</span><span>Артём, Илья</span></div>
+        </article>
+
+        <article class="card card--hover service-card">
+          <div class="service-card__row">
+            <span class="service-card__name">Уход за кожей головы</span>
+            <span class="service-card__price">2 400 ₽</span>
+          </div>
+          <p class="service-card__desc">Диагностика, очищающая процедура и массаж кожи головы.</p>
+          <div class="service-card__meta"><span>60 мин</span><span>все мастера</span></div>
+        </article>
+      </div>
+    </div>
+  </div>
+
+  <!-- Как это работает -->
+  <div class="section">
+    <div class="container">
+      <div class="section__head">
+        <span class="eyebrow">Как это работает</span>
+        <h2 class="section-title">Три шага до записи</h2>
+      </div>
+
+      <div class="grid grid--3">
+        <article class="card step-card">
+          <div class="step-card__num">01</div>
+          <h3 class="step-card__title">Выбираете услугу</h3>
+          <p class="step-card__text">Отмечаете нужные услуги — сервис сам считает длительность и итоговую стоимость.</p>
+        </article>
+        <article class="card step-card">
+          <div class="step-card__num">02</div>
+          <h3 class="step-card__title">Выбираете мастера и время</h3>
+          <p class="step-card__text">В календаре сразу видно, какие слоты свободны. Занятое время нельзя выбрать.</p>
+        </article>
+        <article class="card step-card">
+          <div class="step-card__num">03</div>
+          <h3 class="step-card__title">Подтверждаете запись</h3>
+          <p class="step-card__text">Итоговые детали записи появляются сразу. Оплата — на месте в студии.</p>
+        </article>
+      </div>
+    </div>
+  </div>
+
+  <!-- Мастера -->
+  <div class="section section--soft" id="masters">
+    <div class="container">
+      <div class="section__head">
+        <span class="eyebrow">Команда</span>
+        <h2 class="section-title">Наши мастера</h2>
+      </div>
+
+      <div class="grid grid--3">
+        <article class="card card--hover master-card">
+          <div class="placeholder master-card__photo">Артём</div>
+          <div>
+            <h3 class="master-card__name">Артём Волков</h3>
+            <div class="master-card__role">Барбер · стаж 8 лет</div>
+          </div>
+          <p class="master-card__about">Классика и фейды. Клиенты приходят за аккуратной работой «как в парикмахерской, но быстрее».</p>
+          <span class="badge badge--accent">Стрижка · Борода · Детская</span>
+        </article>
+
+        <article class="card card--hover master-card">
+          <div class="placeholder master-card__photo">Даниил</div>
+          <div>
+            <h3 class="master-card__name">Даниил Орлов</h3>
+            <div class="master-card__role">Мастер-барбер · стаж 5 лет</div>
+          </div>
+          <p class="master-card__about">Работает текстурой и камуфляжем. Ведёт сложные случая с сильной сединой.</p>
+          <span class="badge badge--accent">Стрижка · Борода · Камуфляж</span>
+        </article>
+
+        <article class="card card--hover master-card">
+          <div class="placeholder master-card__photo">Илья</div>
+          <div>
+            <h3 class="master-card__name">Илья Соколов</h3>
+            <div class="master-card__role">Топ-стилист · стаж 11 лет</div>
+          </div>
+          <p class="master-card__about">Стрижки по форме лица, уход за кожей головы. Обучает остальных мастеров.</p>
+          <span class="badge badge--accent">Стрижка · Уход · Камуфляж</span>
+        </article>
+      </div>
+    </div>
+  </div>
+
+  <!-- Работы -->
+  <div class="section" id="works">
+    <div class="container">
+      <div class="section__head">
+        <span class="eyebrow">Работы</span>
+        <h2 class="section-title">Примеры до и после</h2>
+      </div>
+      <div class="grid grid--4">
+        <div class="placeholder work-card">Работа 1</div>
+        <div class="placeholder work-card">Работа 2</div>
+        <div class="placeholder work-card">Работа 3</div>
+        <div class="placeholder work-card">Работа 4</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Отзывы -->
+  <div class="section section--soft">
+    <div class="container">
+      <div class="section__head">
+        <span class="eyebrow">Отзывы</span>
+        <h2 class="section-title">Что говорят клиенты</h2>
+      </div>
+      <div class="grid grid--3">
+        <article class="card review-card">
+          <div class="review-card__stars">★★★★★</div>
+          <p class="review-card__text">Записался за 20 секунд прямо с телефона. Время выбрал сам, пришёл без ожидания.</p>
+          <div class="review-card__author">Кирилл</div>
+        </article>
+        <article class="card review-card">
+          <div class="review-card__stars">★★★★★</div>
+          <p class="review-card__text">Раньше звонил каждый раз. Теперь вижу свободные слоты сразу и выбираю удобный.</p>
+          <div class="review-card__author">Андрей</div>
+        </article>
+        <article class="card review-card">
+          <div class="review-card__stars">★★★★★</div>
+          <p class="review-card__text">Отменил визит вечером, слот сразу освободился. Никаких звонков и переписок.</p>
+          <div class="review-card__author">Максим</div>
+        </article>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <div class="section" id="faq">
+    <div class="container">
+      <div class="section__head">
+        <span class="eyebrow">Вопросы</span>
+        <h2 class="section-title">Частые вопросы</h2>
+      </div>
+      <div class="faq">
+        <div class="faq__item">
+          <div class="faq__q">Нужно ли оплачивать онлайн?</div>
+          <p class="faq__a">Нет. Оплата проходит в студии после визита. Онлайн-оплата не предусмотрена.</p>
+        </div>
+        <div class="faq__item">
+          <div class="faq__q">За сколько времени можно отменить запись?</div>
+          <p class="faq__a">Отменить или перенести визит можно в личном кабинете не позднее чем за 2 часа до начала.</p>
+        </div>
+        <div class="faq__item">
+          <div class="faq__q">Что если я не помню пароль?</div>
+          <p class="faq__a">На экране входа есть ссылка «Забыли пароль». На указанный e-mail придёт письмо для сброса.</p>
+        </div>
+        <div class="faq__item">
+          <div class="faq__q">Насколько далеко можно записаться?</div>
+          <p class="faq__a">Календарь открыт на три месяца вперёд. Ближе к делу появляются дополнительные слоты.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Контакты -->
+  <div class="section section--soft" id="contacts">
+    <div class="container">
+      <div class="section__head">
+        <span class="eyebrow">Контакты</span>
+        <h2 class="section-title">Как нас найти</h2>
+      </div>
+      <div class="contacts">
+        <div class="card">
+          <div class="contacts__title">Адрес</div>
+          <div class="contacts__value">ул. Малая Бронная, 12</div>
+          <p class="muted tiny">5 минут от станции метро Тверская</p>
+        </div>
+        <div class="card">
+          <div class="contacts__title">Телефон</div>
+          <div class="contacts__value">+7 495 000-00-00</div>
+          <p class="muted tiny">Ежедневно с 10:00 до 22:00</p>
+        </div>
+        <div class="card">
+          <div class="contacts__title">Почта</div>
+          <div class="contacts__value">hello@topbro.ru</div>
+          <p class="muted tiny">Отвечаем в течение дня</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Финальный призыв -->
+  <div class="section">
+    <div class="container">
+      <div class="final-cta">
+        <span class="eyebrow">Свободные слоты есть на сегодня</span>
+        <h2 class="final-cta__title">Запишитесь за 30 секунд</h2>
+        <p class="final-cta__text">
+          Выберите мастера и время — сервис сразу покажет, что свободно.
+          Подтверждение придёт в личный кабинет.
+        </p>
+        <button class="btn btn--primary btn--lg" type="button" data-go="booking">Записаться онлайн</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================
+     ЭКРАН 2 — ФОРМА ЗАПИСИ: выбор мастера, даты и времени
+     ====================================================================== -->
+<section class="screen" id="screen-booking">
+  <div class="container booking">
+
+    <div class="booking__head">
+      <span class="eyebrow">Оформление записи</span>
+      <h1 class="booking__title">Выберите мастера и время</h1>
+      <p class="block__hint">Занятые слоты отмечены и недоступны для выбора — вы увидите весь график мастера сразу.</p>
+    </div>
+
+    <!-- Индикатор шагов -->
+    <ol class="stepper">
+      <li class="stepper__item is-done" id="step-1">
+        <span class="stepper__num">✓</span> Услуга и мастер
+      </li>
+      <li class="stepper__item is-active" id="step-2">
+        <span class="stepper__num">2</span> Дата и время
+      </li>
+      <li class="stepper__item" id="step-3">
+        <span class="stepper__num">3</span> Подтверждение
+      </li>
+    </ol>
+
+    <div class="booking__layout">
+      <div>
+        <!-- Шаг 1. Услуги -->
+        <section class="block" id="block-service">
+          <h2 class="block__title">1. Услуга</h2>
+          <p class="block__hint">Можно выбрать несколько услуг — их выполнит один мастер последовательно.</p>
+          <div class="block__body option-grid" id="service-options"></div>
+        </section>
+
+        <!-- Шаг 2. Мастер -->
+        <section class="block" id="block-master">
+          <h2 class="block__title">2. Мастер</h2>
+          <p class="block__hint">Показаны только мастера, которые выполняют выбранные услуги.</p>
+          <div class="block__body option-grid" id="master-options"></div>
+        </section>
+
+        <!-- Шаг 3. Дата и время -->
+        <section class="block" id="block-time">
+          <h2 class="block__title">3. Дата и время</h2>
+          <p class="block__hint">Свободные слоты подсвечены, занятые — перечёркнуты.</p>
+
+          <div class="block__body">
+            <div class="date-strip" id="date-strip"></div>
+
+            <div class="block" style="margin: 24px 0 0">
+              <div class="slot-grid" id="slot-grid"></div>
+              <p class="tz-note">⏱ Время указано по местному времени: Москва (UTC+3). Длительность визита — <span id="tz-duration">60</span> минут.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Итоговая панель -->
+      <aside class="summary">
+        <h2 class="summary__title">Ваша запись</h2>
+
+        <div class="summary__list" id="summary-list">
+          <p class="summary__empty">Выберите услугу, мастера и время — итог появится здесь.</p>
+        </div>
+
+        <div class="summary__total">
+          <span>Итого</span>
+          <span id="summary-price">0 ₽</span>
+        </div>
+
+        <div class="summary__timer" id="summary-timer" hidden>
+          <span>⏳</span> Слот зарезервирован на <span id="timer-value">05:00</span>
+        </div>
+
+        <p class="badge badge--danger" id="timer-error" hidden style="margin-top: 12px">
+          Время резерва истекло — слот снова свободен. Выберите другое время.
+        </p>
+
+        <button class="btn btn--primary btn--block" type="button" id="confirm-btn" disabled>
+          Подтвердить запись
+        </button>
+        <button class="btn btn--ghost btn--block" type="button" data-go="landing">
+          ← Вернуться на лендинг
+        </button>
+
+        <p class="summary__note">Онлайн-оплаты нет: услугу вы оплачиваете в студии. Отменить визит можно не позднее чем за 2 часа.</p>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================
+     ЭКРАН 3 — ПОДТВЕРЖДЕНИЕ ЗАПИСИ
+     ====================================================================== -->
+<section class="screen" id="screen-confirmation">
+  <div class="container confirm">
+    <div class="confirm__card">
+      <div class="confirm__icon">✓</div>
+
+      <h1 class="confirm__title">Запись подтверждена</h1>
+      <p class="confirm__text">
+        Детали визита сохранены в личном кабинете. Ждём вас в студии —
+        за 5 минут до начала, чтобы спокойно переодеться.
+      </p>
+
+      <div class="confirm__number">Номер записи: <strong id="confirm-id">TB-0000</strong></div>
+
+      <div class="details">
+        <div class="details__row">
+          <span class="details__label">Услуга</span>
+          <span class="details__value" id="confirm-service">—</span>
+        </div>
+        <div class="details__row">
+          <span class="details__label">Мастер</span>
+          <span class="details__value" id="confirm-master">—</span>
+        </div>
+        <div class="details__row">
+          <span class="details__label">Дата</span>
+          <span class="details__value" id="confirm-date">—</span>
+        </div>
+        <div class="details__row">
+          <span class="details__label">Время</span>
+          <span class="details__value" id="confirm-time">—</span>
+        </div>
+        <div class="details__row">
+          <span class="details__label">Длительность</span>
+          <span class="details__value" id="confirm-duration">—</span>
+        </div>
+        <div class="details__row">
+          <span class="details__label">Стоимость</span>
+          <span class="details__value details__value--accent" id="confirm-price">—</span>
+        </div>
+        <div class="details__row">
+          <span class="details__label">Адрес</span>
+          <span class="details__value">ул. Малая Бронная, 12</span>
+        </div>
+      </div>
+
+      <div class="confirm__actions">
+        <button class="btn btn--primary" type="button">В личный кабинет</button>
+        <button class="btn btn--secondary" type="button" data-go="booking">Изменить запись</button>
+        <button class="btn btn--ghost" type="button" data-go="landing">На главную</button>
+      </div>
+
+      <p class="confirm__note">
+        Оплата — на месте в студии. Отменить или перенести визит можно в личном кабинете
+        не позднее чем за 2 часа до начала.
+      </p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ПОДВАЛ -->
+<footer class="footer">
+  <div class="container footer__inner">
+    <span>© 2026 TOP BRO · барбершоп, Москва</span>
+    <span>Прототип клиентского пути: лендинг → форма записи → подтверждение</span>
+  </div>
+</footer>
+
+<script src="assets/js/app.js"></script>
+</body>
+</html>
