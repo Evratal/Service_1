@@ -1,0 +1,281 @@
+/* Дополнительные стили клиентской части: экран выбора времени, тосты,
+   карточки записей, форма входа. Основные элементы — из style.css. */
+
+.shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--bg, #fdfdfc);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.header__inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header .brand {
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  font-size: 20px;
+}
+
+.nav {
+  display: flex;
+  gap: 14px;
+  margin-left: auto;
+  font-size: 14px;
+}
+
+.header__auth {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: 8px;
+}
+
+.block__title {
+  font-size: 22px;
+  margin: 0 0 8px;
+}
+
+.block__hint {
+  margin: 0 0 20px;
+}
+
+.date-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+}
+
+.date-chip {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: transparent;
+  border-radius: 12px;
+  padding: 8px 12px;
+  min-width: 74px;
+  text-align: center;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.5;
+  color: inherit;
+  flex: 0 0 auto;
+}
+
+.date-chip strong {
+  display: block;
+  font-size: 14px;
+}
+
+.date-chip:hover {
+  border-color: var(--accent, #111);
+}
+
+.date-chip.is-active {
+  background: var(--accent, #111);
+  color: #fff;
+  border-color: var(--accent, #111);
+}
+
+.slot-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.slot {
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  border-radius: 10px;
+  background: transparent;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 14px;
+  color: inherit;
+}
+
+.slot.is-active {
+  background: #0a7a3d;
+  border-color: #0a7a3d;
+  color: #fff;
+}
+
+.summary {
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  font-size: 14px;
+}
+
+.summary__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.summary__row span {
+  color: var(--muted, #666);
+}
+
+.szone {
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  margin-top: 6px;
+  padding-top: 8px;
+}
+
+.notes {
+  width: 100%;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font: inherit;
+  margin-top: 6px;
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.option input[type='text'],
+.option input[type='email'],
+.option input[type='password'] {
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font: inherit;
+  margin-top: 6px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 360px;
+}
+
+.toast {
+  position: fixed;
+  top: 64px;
+  right: 20px;
+  z-index: 50;
+  max-width: 340px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.14);
+  background: #b3261e;
+  color: #fff;
+  font-size: 14px;
+}
+
+.toast--success {
+  background: #0a7a3d;
+}
+
+.work-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.work-card {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.confirm {
+  text-align: center;
+}
+
+.confirm__title {
+  font-size: 28px;
+  margin: 0 0 10px;
+}
+
+.details {
+  text-align: left;
+  max-width: 420px;
+  margin: 0 auto 18px;
+}
+
+.details__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.details__row span {
+  color: var(--muted, #666);
+}
+
+.details__row--accent strong {
+  font-size: 20px;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 12px;
+  color: var(--muted, #666);
+}
+
+.hero__title {
+  font-size: clamp(28px, 5vw, 44px);
+  line-height: 1.15;
+  margin: 10px 0;
+}
+
+.hero__facts {
+  display: flex;
+  gap: 28px;
+  flex-wrap: wrap;
+  margin: 18px 0;
+}
+
+.hero__fact {
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+}
+
+.hero__fact span {
+  color: var(--muted, #666);
+  font-size: 12px;
+}
+
+.section-title {
+  font-size: 20px;
+  margin: 0 0 16px;
+}
+
+a.link {
+  text-decoration: none;
+  color: inherit;
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .nav a:nth-child(2) {
+    display: none;
+  }
+}
