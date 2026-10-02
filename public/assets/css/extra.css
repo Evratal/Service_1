@@ -11,8 +11,8 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  background: var(--bg, #fdfdfc);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--color-bg, #0e0e10);
+  border-bottom: 1px solid var(--color-line-soft, rgba(255, 255, 255, 0.08));
 }
 
 .header__inner {
@@ -28,6 +28,7 @@
   font-weight: 800;
   letter-spacing: 0.04em;
   font-size: 20px;
+  color: var(--color-accent, #c9a227);
 }
 
 .nav {
@@ -169,6 +170,27 @@
   max-width: 360px;
 }
 
+/* Формы входа переиспользуют класс .option (карточки услуг), но внутри
+   них input настоящий: возвращаем видимость и кликабельность. */
+.auth-form .option {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+.auth-form .option input {
+  position: static;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Подсветка выбранных карточек услуг и мастеров на экране записи */
+.option:has(input:checked) {
+  border-color: var(--color-accent, #c9a227);
+  background: var(--color-accent-soft, rgba(201, 162, 39, 0.12));
+}
+
 .toast {
   position: fixed;
   top: 64px;
@@ -261,6 +283,102 @@
 .hero__fact span {
   color: var(--muted, #666);
   font-size: 12px;
+}
+
+.steps {
+  gap: 16px;
+}
+
+.steps .step-card {
+  background: var(--color-surface, #1b1b1f);
+  border: 1px solid var(--color-line-soft, #26262c);
+  border-radius: var(--radius-lg, 18px);
+  padding: var(--space-5, 24px);
+  padding-top: 0;
+}
+
+.steps .step-card__num {
+  position: static;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--color-accent, #c9a227);
+  border: 1px solid var(--color-accent-line, rgba(201, 162, 39, 0.35));
+  border-radius: 999px;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  margin-bottom: var(--space-4, 16px);
+}
+
+.steps .step-card__title {
+  font-size: var(--fs-h3, 20px);
+  margin-bottom: var(--space-2, 8px);
+}
+
+.steps .step-card__text {
+  font-size: var(--fs-small, 14px);
+  color: var(--color-text-muted, #a2a2ad);
+  line-height: 1.5;
+}
+
+.master-card .btn {
+  margin-top: auto;
+}
+
+.cta {
+  text-align: center;
+  margin-top: var(--space-5, 24px);
+}
+
+.contacts__grid {
+  display: grid;
+  gap: 12px;
+  max-width: 560px;
+}
+
+.contact-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 16px;
+  border: 1px solid var(--color-line-soft, #26262c);
+  border-radius: var(--radius-md, 12px);
+  background: var(--color-surface, #1b1b1f);
+}
+
+.contact-row__label {
+  color: var(--color-text-muted, #a2a2ad);
+  font-size: var(--fs-small, 14px);
+}
+
+.contacts-block .section-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-muted, #a2a2ad);
+}
+
+.contacts-block .btn {
+  margin-top: 16px;
+  padding: 7px 14px;
+  font-size: 13px;
+}
+
+.footer {
+  margin-top: auto;
+}
+
+.footer .brand {
+  color: var(--color-accent, #c9a227);
+  letter-spacing: 0.06em;
+}
+
+.btn--sm {
+  padding: 9px 16px;
+  font-size: 13px;
 }
 
 .section-title {

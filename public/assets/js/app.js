@@ -198,7 +198,7 @@ function landingHtml() {
                   <h3 class="master-card__name">${esc(master.name)}</h3>
                   <div class="master-card__role">${esc(master.specialization)}</div>
                   <p class="muted small">${esc(master.bio ?? '')}</p>
-                  <a class="btn btn--ghost btn--sm" href="#/booking&master=${master.id}">Выбрать</a>
+                  <a class="btn btn--primary btn--sm btn--block" href="#/booking&master=${master.id}">Выбрать</a>
                 </div>`
             )
             .join('')}
@@ -207,19 +207,30 @@ function landingHtml() {
 
       <section class="block section--soft">
         <h2 class="section-title">Как это работает</h2>
-        <div class="grid grid--3">
-          <div class="step-card"><strong>1</strong><p>Выбираете услугу, мастера и удобное время.</p></div>
-          <div class="step-card"><strong>2</strong><p>Подтверждаете запись — она сразу видна в кабинете.</p></div>
-          <div class="step-card"><strong>3</strong><p>Мастер получает занятый слот, конфликты исключены.</p></div>
+        <div class="grid grid--3 steps">
+          <div class="step-card"><span class="step-card__num">01</span><div class="step-card__title">Выберите</div><div class="step-card__text">Услуги, мастера и удобное время — за пару кликов.</div></div>
+          <div class="step-card"><span class="step-card__num">02</span><div class="step-card__title">Подтвердите</div><div class="step-card__text">Слот сразу закрепляется за вами и появляется в «Мои записи».</div></div>
+          <div class="step-card"><span class="step-card__num">03</span><div class="step-card__title">Приходите</div><div class="step-card__text">Мастер видит бронь в своём графике — лишние переговоры не нужны.</div></div>
         </div>
+        <div class="cta"><a class="btn btn--primary btn--lg" href="#/booking">Записаться</a></div>
       </section>
 
-      <section class="block">
+      <section class="block contacts-block">
         <h2 class="section-title">Контакты</h2>
-        <div class="contacts__value">${esc(s.address)}</div>
-        <div class="muted tiny">Ежедневно с ${esc(s.workStart)} до ${esc(s.workEnd)}</div>
+        <div class="contacts__grid">
+          <div class="contact-row"><span class="contact-row__label">Адрес</span><strong>${esc(s.address)}</strong></div>
+          <div class="contact-row"><span class="contact-row__label">Часы работы</span><strong>Ежедневно ${esc(s.workStart)}–${esc(s.workEnd)}</strong></div>
+          <div class="contact-row"><span class="contact-row__label">Телефон</span><strong>${esc(s.phone)}</strong></div>
+        </div>
+        <a class="btn btn--primary btn--sm" style="padding: 9px 18px; font-size: 13px;" href="tel:+${(s.phone || '').replace(/[^\d]/g, '')}">Позвонить</a>
       </section>
-    </main>`;
+    </main>
+    <footer class="footer">
+      <div class="footer__inner">
+        <strong class="brand">TOP&nbsp;BRO</strong>
+        <span>Барбершоп в Москве · онлайн-запись за 30 секунд</span>
+      </div>
+    </footer>`;
 }
 
 /* ---------------------------------------------------------------- форма записи */
@@ -411,6 +422,8 @@ function updateTotals() {
 
   if (b.slot) {
     lines += `<div class="summary__row"><span>Время</span><strong>${inZone(b.slot.startsAt, state.salon.timezone, 'full')}</strong></div>`;
+  } else {
+    lines += `<div class="summary__row"><span>Время</span><strong class="muted">выберите свободное окно</strong></div>`;
   }
 
   lines += `<div class="summary__row szone"><span>Итог</span><strong>${money(price)}</strong></div>`;
@@ -511,13 +524,15 @@ function appointmentHtml(appointment) {
 async function renderMine() {
   const app = document.getElementById('app');
   if (!state.user) {
-    app.replaceChildren($$(`<main class="page section">
+    app.replaceChildren($$(`<div class="shell">${headerHtml()}<main class="page section">
       <p class="muted">Чтобы видеть записи, <a class="link" href="#/login">войдите в аккаунт</a>.</p>
-    </main>`));
+    </main></div>`));
+    applyHeaderHandlers(app);
     return;
   }
 
-  app.replaceChildren($$(`<main class="page section"><p class="muted">Загружаю записи…</p></main>`));
+  app.replaceChildren($$(`<div class="shell">${headerHtml()}<main class="page section"><p class="muted">Загружаю записи…</p></main></div>`));
+  applyHeaderHandlers(app);
 
   const response = await get('/api/appointments');
   const appointments = response.json?.appointments ?? [];
@@ -548,11 +563,12 @@ async function renderMine() {
     .join('');
 
   app.replaceChildren(
-    $$(`<main class="page section">
+    $$(`<div class="shell">${headerHtml()}<main class="page section">
       <h1 class="block__title">Мои записи</h1>
       ${appointments.length === 0 ? '<p class="muted">Записей пока нет. <a class="link" href="#/booking">Записаться</a></p>' : `<div class="work-grid">${cards}</div>`}
-    </main>`)
+    </main></div>`)
   );
+  applyHeaderHandlers(app);
 }
 
 /* ---------------------------------------------------------------- вход */
@@ -602,6 +618,12 @@ async function renderLandingView() {
 }
 
 async function renderBookingView() {
+  if (state.services.length === 0 || state.masters.length === 0) {
+    const [services, masters] = await Promise.all([get('/api/services'), get('/api/masters')]);
+    state.services = services.json?.services ?? state.services;
+    state.masters = masters.json?.masters ?? state.masters;
+  }
+
   if (!state.salon) {
     const salon = await get('/api/salon');
     state.salon = salon.json;
@@ -632,12 +654,12 @@ async function renderBookingView() {
     });
   });
 
-  document.querySelectorAll('[data-role="master"]').forEach((input) => {
-    input.addEventListener('change', async () => {
-      state.booking.masterId = Number(input.value);
-      state.booking.slot = null;
-      loadSlots();
-    });
+  document.getElementById('masters-box').addEventListener('change', (event) => {
+    const input = event.target.closest('[data-role="master"]');
+    if (!input) return;
+    state.booking.masterId = Number(input.value);
+    state.booking.slot = null;
+    loadSlots();
   });
 
   document.querySelectorAll('[data-role="day"]').forEach((day) => {
@@ -646,6 +668,11 @@ async function renderBookingView() {
       day.classList.add('is-active');
       state.booking.date = day.dataset.date;
       state.booking.slot = null;
+      if (!state.booking.masterId) {
+        const box = document.getElementById('slots-box');
+        if (box) box.innerHTML = '<p class="muted small">Сначала выберите мастера.</p>';
+        return;
+      }
       loadSlots();
     });
   });
