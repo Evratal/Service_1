@@ -730,6 +730,17 @@ async function renderMine() {
 
 /* ---------------------------------------------------------------- вход */
 
+/* Кнопка входа через «Яндекс». Оформлена по требованиям «Яндекса»: белый
+   фон, чёрный текст, фирменный знак красного цвета, скруглённые углы и
+   достаточные отступы. Ведёт обычной ссылкой на наш маршрут /api/auth/yandex. */
+function yandexButtonHtml() {
+  return `
+    <a class="btn-yandex" href="/api/auth/yandex" rel="nofollow">
+      <span class="btn-yandex__logo" aria-hidden="true">Я</span>
+      Войти через Яндекс
+    </a>`;
+}
+
 function loginHtml() {
   return `
     <main class="page section block">
@@ -738,8 +749,13 @@ function loginHtml() {
         <label class="option">E-mail <input name="email" type="email" autocomplete="email" required /></label>
         <label class="option">Пароль <input name="password" type="password" autocomplete="current-password" minlength="8" required /></label>
         <button class="btn btn--primary" type="submit">Войти</button>
-        <p class="muted tiny">Нет аккаунта? Зарегистрируйтесь тут же — достаточно e-mail, имени и пароля.</p>
       </form>
+      <details class="block auth-reset">
+        <summary>Забыли пароль?</summary>
+        <p class="muted">Отдельного восстановления пароля нет. Если вы входили через «Яндекс», пароль и не нужен — воспользуйтесь кнопкой ниже. В остальных случаях обратитесь в студию.</p>
+      </details>
+      <div class="auth-divider"><span>или</span></div>
+      ${yandexButtonHtml()}
       <hr />
       <details class="block"><summary>Зарегистрироваться</summary>
         <form id="register-form" class="auth-form">
@@ -748,6 +764,8 @@ function loginHtml() {
           <label class="option">Пароль <input name="password" type="password" minlength="8" required /></label>
           <button class="btn btn--secondary" type="submit">Создать аккаунт</button>
         </form>
+        <p class="muted tiny">Быстрее всего — войти через «Яндекс»: отдельный пароль не нужен.</p>
+        ${yandexButtonHtml()}
       </details>
       <p class="muted tiny">Демо-данные: anna@example.com / oleg@example.com, пароль Demo2026!</p>
     </main>`;
@@ -861,6 +879,11 @@ async function renderLoginView() {
   app.replaceChildren($$(`<div class="shell">${headerHtml()}${loginHtml()}</div>`));
   applyHeaderHandlers(app);
 
+  if (pendingAuthError) {
+    showToast(pendingAuthError);
+    pendingAuthError = null;
+  }
+
   const submitForm = async (event, mode) => {
     event.preventDefault();
     const form = event.currentTarget;
@@ -953,8 +976,55 @@ async function adminRoute() {
   applyHeaderHandlers(app);
 }
 
+/* Сообщения, которые нужно показать один раз после возврата от «Яндекса»:
+   об ошибке — на экране входа, об успехе — после отрисовки главной. */
+let pendingAuthError = null;
+let pendingAuthToast = null;
+
+/* Разбирает результат возврата от «Яндекса» из фрагмента адреса:
+   #/login?yandex=<status>&token=<...>. Токен не должен оставаться в адресной
+   строке (иначе попадёт в историю браузера), поэтому сразу его вычищаем. */
+function readYandexRedirect() {
+  const hash = location.hash.startsWith('#') ? location.hash.slice(1) : location.hash;
+  const q = hash.indexOf('?');
+  if (q === -1) return null;
+
+  const params = new URLSearchParams(hash.slice(q + 1));
+  const status = params.get('yandex');
+  if (!status) return null;
+
+  const token = params.get('token');
+  history.replaceState(null, '', `${location.pathname}${location.search}#/login`);
+  return { status, token };
+}
+
+const YANDEX_ERRORS = {
+  denied: 'Вход через «Яндекс» отменён. Попробуйте снова или войдите по паролю.',
+  blocked: 'Аккаунт заблокирован. Обратитесь в студию.',
+  disabled: 'Вход через «Яндекс» пока не настроен.',
+  error: 'Не удалось войти через «Яндекс». Попробуйте снова или войдите по паролю.'
+};
+
 async function route() {
   try {
+    const yandex = readYandexRedirect();
+    if (yandex) {
+      if (yandex.status === 'ok' && yandex.token) {
+        state.token = yandex.token;
+        localStorage.setItem(storageTokenKey, yandex.token);
+        const me = await get('/api/auth/me');
+        if (me.status === 200) {
+          state.user = me.json.user;
+          state.booking = { serviceIds: [], masterId: null, date: null, slot: null, hold: null };
+          pendingAuthToast = `Добро пожаловать, ${state.user.name}!`;
+          location.hash = '#/';
+          return;
+        }
+        logout(true);
+      }
+      pendingAuthError = YANDEX_ERRORS[yandex.status] ?? YANDEX_ERRORS.error;
+    }
+
     if (!state.salon && !state.user) {
       const me = state.token ? await get('/api/auth/me') : { status: 401 };
       if (me.status === 200) state.user = me.json.user;
@@ -970,6 +1040,11 @@ async function route() {
     else if (hash.startsWith('/admin')) await adminRoute();
     else if (hash.startsWith('/login')) await renderLoginView();
     else await renderLandingView();
+
+    if (pendingAuthToast) {
+      showToast(pendingAuthToast, 'success');
+      pendingAuthToast = null;
+    }
 
     if (state.user) refreshNoticeCount().catch(() => {});
   } catch (error) {

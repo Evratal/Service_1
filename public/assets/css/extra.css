@@ -559,6 +559,64 @@ a.link {
   color: #e7c65c;
 }
 
+/* Кнопка входа через «Яндекс». Оформление по гайдлайну сервиса: белый фон,
+   чёрный текст, фирменный знак красного цвета, скруглённые углы и отступы
+   вокруг знака. Знак — буква «Я» в красном круге (без искажений пропорций). */
+.btn-yandex {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  max-width: 360px;
+  padding: 10px 18px;
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn-yandex:hover {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+}
+
+.btn-yandex__logo {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fc3f1d;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+/* Разделитель «или» между входом по паролю и входом через «Яндекс». */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 360px;
+  margin: 4px 0;
+  color: var(--color-text-muted, #a2a2ad);
+  font-size: 12px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-line-soft, rgba(255, 255, 255, 0.12));
+}
+
 /* Поля форм админки. Класс .field — обычная подпись+поле; класс .option
    (карточки услуг/мастеров) скрывает свой input по правилам стиля ниже. */
 .field {

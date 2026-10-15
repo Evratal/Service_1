@@ -84,6 +84,18 @@ export function createApp({ db, publicDir = 'public' }) {
       url
     });
 
+    // Некоторые маршруты отвечают перенаправлением, а не JSON (например,
+    // вход через «Яндекс»). Тогда отдаём 302 с адресом и не трогаем тело.
+    if (result?.redirect) {
+      res.writeHead(result.status ?? 302, {
+        ...SECURITY_HEADERS,
+        Location: result.redirect,
+        'Cache-Control': 'no-store'
+      });
+      res.end();
+      return;
+    }
+
     const status = result?.status ?? 200;
     const payload = result?.payload ?? null;
 

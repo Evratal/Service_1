@@ -17,6 +17,55 @@ export function findById(db, id) {
   return db.prepare('SELECT * FROM users WHERE id = ?').get(id) ?? null;
 }
 
+/** Находит пользователя по внешней учётной записи (провайдер + его id). */
+export function findByProvider(db, provider, providerId) {
+  return (
+    db
+      .prepare('SELECT * FROM users WHERE provider = ? AND provider_id = ?')
+      .get(provider, String(providerId)) ?? null
+  );
+}
+
+/**
+ * Находит или заводит пользователя для входа через внешний сервис.
+ *
+ * Порядок поиска:
+ *   1. по внешней учётной записи — повторный вход в тот же аккаунт;
+ *   2. по e-mail — привязываем внешний вход к уже существующему аккаунту;
+ *   3. иначе создаём нового клиента без пароля.
+ *
+ * Заблокированный аккаунт не привязывается и возвращается как есть —
+ * решение о показе ошибки принимает маршрут.
+ */
+export function upsertExternalUser(db, { provider, providerId, email, name }) {
+  const linked = findByProvider(db, provider, providerId);
+  if (linked) return linked;
+
+  const existing = findByEmail(db, email);
+  if (existing) {
+    if (existing.is_active !== 1) return existing;
+    db.prepare('UPDATE users SET provider = ?, provider_id = ? WHERE id = ?').run(
+      provider,
+      String(providerId),
+      existing.id
+    );
+    return findById(db, existing.id);
+  }
+
+  const now = utcNow();
+  const userId = Number(
+    db
+      .prepare(
+        `INSERT INTO users (email, password_hash, name, phone, is_active, created_at, provider, provider_id)
+         VALUES (?, '', ?, NULL, 1, ?, ?, ?)`
+      )
+      .run(email.toLowerCase(), name, now, provider, String(providerId)).lastInsertRowid
+  );
+
+  db.prepare('INSERT INTO user_roles (user_id, role) VALUES (?, ?)').run(userId, 'client');
+  return findById(db, userId);
+}
+
 export function rolesOf(db, userId) {
   return db
     .prepare('SELECT role FROM user_roles WHERE user_id = ? ORDER BY role')

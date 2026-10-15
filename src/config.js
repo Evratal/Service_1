@@ -71,7 +71,19 @@ export const config = {
   // Доверять ли заголовку X-Forwarded-For. 1 — только если сервер стоит за
   // своим прокси (nginx на Beget). Без этого заголовок можно подделать
   // и обойти лимиты попыток входа.
-  trustProxy: (process.env.TRUST_PROXY ?? '0') === '1'
+  trustProxy: (process.env.TRUST_PROXY ?? '0') === '1',
+
+  // Вход через «Яндекс». Секрет и адрес возврата задаются только в панели
+  // сервера (в репозитории их нет). Если хоть одно значение пусто — вход
+  // через «Яндекс» выключен, соответствующая кнопка не работает.
+  yandex: {
+    clientId: (process.env.YANDEX_CLIENT_ID ?? '').trim(),
+    clientSecret: (process.env.YANDEX_CLIENT_SECRET ?? '').trim(),
+    redirectUri: (process.env.YANDEX_REDIRECT_URI ?? '').trim(),
+    get enabled() {
+      return Boolean(this.clientId && this.clientSecret && this.redirectUri);
+    }
+  }
 };
 
 export default config;

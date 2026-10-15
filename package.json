@@ -13,8 +13,9 @@
     "db:reset": "node scripts/migrate.js --fresh && node scripts/seed.js",
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "check": "node scripts/check.js && node scripts/check-api.js",
-    "check:web": "node scripts/check-web.js"
+    "check": "node scripts/check.js && node scripts/check-api.js && node scripts/check-yandex.js",
+    "check:web": "node scripts/check-web.js",
+    "check:yandex": "node scripts/check-yandex.js"
   },
   "dependencies": {},
   "devDependencies": {}
