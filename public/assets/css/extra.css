@@ -113,6 +113,18 @@
   color: #fff;
 }
 
+.slot--busy {
+  border-style: dashed;
+  border-color: rgba(153, 27, 27, 0.45);
+  color: #991b1b;
+}
+
+.slot--busy.is-active {
+  background: #991b1b;
+  border-color: #991b1b;
+  color: #fff;
+}
+
 .summary {
   background: rgba(0, 0, 0, 0.03);
   border-radius: 14px;
@@ -210,7 +222,8 @@
 }
 
 .work-grid {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
 }
 
@@ -396,4 +409,207 @@ a.link {
   .nav a:nth-child(2) {
     display: none;
   }
+}
+
+/* ========== Уведомления и административная панель ========== */
+
+.notice-link {
+  position: relative;
+  color: var(--color-text-muted, #a2a2ad);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.notice-count {
+  display: none;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--color-accent, #c9a227);
+  color: #1b1b1f;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 18px;
+}
+
+.notice-count.is-shown {
+  display: inline-block;
+}
+
+.notice {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-line-soft, #26262c);
+  border-radius: var(--radius-md, 12px);
+  background: var(--color-surface, #1b1b1f);
+}
+
+.notice--unread {
+  border-color: var(--color-accent, #c9a227);
+  background: var(--color-accent-soft, rgba(201, 162, 39, 0.08));
+}
+
+.notice__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.notice__actions {
+  display: flex;
+}
+
+.admin-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0 20px;
+}
+
+.admin-tab {
+  padding: 9px 16px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--color-text-muted, #a2a2ad);
+  background: var(--color-surface, #1b1b1f);
+  border: 1px solid var(--color-line-soft, #26262c);
+  border-radius: var(--radius-md, 12px);
+}
+
+.admin-tab.is-active {
+  color: var(--color-accent, #c9a227);
+  border-color: var(--color-accent, #c9a227);
+}
+
+.admin-toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.admin-list {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-appointment {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-card__badges,
+.admin-card__actions,
+.admin-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.admin-inline-form {
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--color-line-soft, #26262c);
+}
+
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-form__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.admin-form-box {
+  margin-bottom: 16px;
+}
+
+.admin-h {
+  margin: 14px 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted, #a2a2ad);
+}
+
+.admin-details {
+  margin-top: 10px;
+}
+
+.admin-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-accent, #c9a227);
+}
+
+.badge--warn {
+  background: rgba(201, 162, 39, 0.2);
+  color: #e7c65c;
+}
+
+/* Поля форм админки. Класс .field — обычная подпись+поле; класс .option
+   (карточки услуг/мастеров) скрывает свой input по правилам стиля ниже. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field .input,
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font: inherit;
+  color: var(--color-text, #f2f2f5);
+  background: var(--color-surface-2, #232329);
+  margin-top: 2px;
+}
+
+.schedule-editor {
+  display: grid;
+  gap: 6px;
+}
+
+.schedule-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.schedule-row__day {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 90px;
+  font-weight: 600;
+}
+
+.schedule-row__day input[type='checkbox'] {
+  position: static;
+  opacity: 1;
+  pointer-events: auto;
+  width: auto;
+}
+
+.schedule-row .input--sm,
+.schedule-row input[type='time'] {
+  width: auto;
 }

@@ -2,8 +2,12 @@
  * Доступ к справочным данным: студия, услуги, мастера, расписание.
  *
  * Это публичная часть сервиса — её видит любой посетитель сайта, поэтому
- * запросы здесь не фильтруются по пользователю.
+ * запросы здесь не фильтруются по пользователю. Административные функции
+ * (создание, изменение, мягкое отключение) собраны в конце файла.
  */
+
+import { withTransaction } from '../db.js';
+import { utcNow } from '../security.js';
 
 export function getSalon(db) {
   return db.prepare('SELECT * FROM salon WHERE id = 1').get() ?? null;
@@ -82,7 +86,7 @@ export function getMaster(db, id) {
     )
     .get(id);
   if (!master) return null;
-  return { ...master, services: servicesOfMaster(db, id) };
+  return { ...master, services: servicesOfMaster(db, id), schedule: getSchedule(db, id) };
 }
 
 export function servicesOfMaster(db, masterId) {
@@ -122,4 +126,118 @@ export function listTimeBlocks(db, masterId, fromIso, toIso) {
         ORDER BY starts_at`
     )
     .all(masterId, toIso, fromIso);
+}
+
+/* ---------------------------------------------------------------------------
+   Административные функции.
+   Здесь работают только с ролью admin: проверка роли живёт в маршруте,
+   а этот слой лишь выполняет запросы. Мягкое отключение (is_active = 0)
+   прячет объект из клиентских списков, но сохраняет его в истории записей.
+   --------------------------------------------------------------------------- */
+
+/** Все услуги, включая отключённые, и одна услуга. */
+export function listAdminServices(db) {
+  return db.prepare('SELECT * FROM services ORDER BY name').all();
+}
+
+/** Создаёт услугу. */
+export function createService(db, { name, description = null, durationMin, priceRub }) {
+  const id = Number(
+    db
+      .prepare(
+        `INSERT INTO services (name, description, duration_min, price_rub, is_active, created_at)
+         VALUES (?, ?, ?, ?, 1, ?)`
+      )
+      .run(name, description, durationMin, priceRub, utcNow()).lastInsertRowid
+  );
+  return getService(db, id);
+}
+
+/** Обновляет услугу. updates — объект с колонками из белого списка маршрута. */
+export function updateService(db, id, updates) {
+  const keys = Object.keys(updates);
+  if (keys.length === 0) throw new Error('Нет полей для обновления услуги');
+
+  const sets = keys.map((key) => `${key} = ?`).join(', ');
+  db.prepare(`UPDATE services SET ${sets} WHERE id = ?`).run(...Object.values(updates), id);
+  return getService(db, id);
+}
+
+/** Все мастера, включая отключённых, с услугами и графиком. */
+export function listAdminMasters(db) {
+  const masters = db
+    .prepare(
+      `SELECT m.id, m.user_id, m.specialization, m.bio, m.is_active, u.name, u.email, u.phone
+         FROM masters m
+         JOIN users u ON u.id = m.user_id
+        ORDER BY u.name`
+    )
+    .all();
+
+  return masters.map((master) => ({
+    ...master,
+    services: servicesOfMaster(db, master.id),
+    schedule: getSchedule(db, master.id)
+  }));
+}
+
+/**
+ * Создаёт мастера.
+ *
+ * Учётная запись пользователя (e-mail, пароль, роли client+master) создаётся
+ * маршрутом до вызова этой функции: пароль хешируется там же, где и при
+ * регистрации.
+ */
+export function createMaster(db, { userId, specialization, bio = null, serviceIds = [], schedule = [] }) {
+  const id = withTransaction(db, () => {
+    const masterId = Number(
+      db
+        .prepare('INSERT INTO masters (user_id, specialization, bio, is_active) VALUES (?, ?, ?, 1)')
+        .run(userId, specialization, bio).lastInsertRowid
+    );
+
+    const link = db.prepare('INSERT INTO master_services (master_id, service_id) VALUES (?, ?)');
+    for (const serviceId of serviceIds) link.run(masterId, serviceId);
+
+    insertScheduleRows(db, masterId, schedule);
+    return masterId;
+  });
+
+  return getMaster(db, id);
+}
+
+/** Обновляет профиль мастера. updates — колонки таблицы masters. */
+export function updateMaster(db, id, updates) {
+  const keys = Object.keys(updates);
+  if (keys.length === 0) throw new Error('Нет полей для обновления мастера');
+
+  const sets = keys.map((key) => `${key} = ?`).join(', ');
+  db.prepare(`UPDATE masters SET ${sets} WHERE id = ?`).run(...Object.values(updates), id);
+  return getMaster(db, id);
+}
+
+/** Заменяет набор услуг мастера целиком. */
+export function replaceMasterServices(db, masterId, serviceIds) {
+  withTransaction(db, () => {
+    db.prepare('DELETE FROM master_services WHERE master_id = ?').run(masterId);
+    const link = db.prepare('INSERT INTO master_services (master_id, service_id) VALUES (?, ?)');
+    for (const serviceId of serviceIds) link.run(masterId, serviceId);
+  });
+}
+
+/** Заменяет график мастера целиком. */
+export function replaceMasterSchedule(db, masterId, schedule) {
+  withTransaction(db, () => {
+    db.prepare('DELETE FROM schedules WHERE master_id = ?').run(masterId);
+    insertScheduleRows(db, masterId, schedule);
+  });
+}
+
+function insertScheduleRows(db, masterId, rows) {
+  const insert = db.prepare(
+    'INSERT INTO schedules (master_id, weekday, start_time, end_time, is_working) VALUES (?, ?, ?, ?, ?)'
+  );
+  for (const row of rows) {
+    insert.run(masterId, row.weekday, row.start_time, row.end_time, row.is_working ? 1 : 0);
+  }
 }

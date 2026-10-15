@@ -15,6 +15,8 @@ import { optionalSession, requireSession } from './auth.js';
 import { registerAuthRoutes } from './routes/auth.js';
 import { registerCatalogRoutes } from './routes/catalog.js';
 import { registerAppointmentRoutes } from './routes/appointments.js';
+import { registerNotificationRoutes } from './routes/notifications.js';
+import { registerAdminRoutes } from './routes/admin.js';
 
 /**
  * Заголовки безопасности на каждый ответ.
@@ -54,6 +56,8 @@ export function createApp({ db, publicDir = 'public' }) {
   registerAuthRoutes(router);
   registerCatalogRoutes(router);
   registerAppointmentRoutes(router);
+  registerNotificationRoutes(router);
+  registerAdminRoutes(router);
 
   const serveStatic = createStaticHandler(publicDir);
 

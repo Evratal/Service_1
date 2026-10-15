@@ -62,8 +62,10 @@ function minutesOf(text) {
  * @param {number} dayStartMs
  * @param {number} dayEndMs
  * @param {number[]} [heldSlotIds] интервалы, удерживаемые другими пользователями
+ * @param {number} [excludeAppointmentId] запись, которую нужно не считать занятой
+ *   (переносимая запись «уезжает» со своего старого времени)
  */
-export function busyIntervals(db, masterId, dayStartMs, dayEndMs, heldSlotIds = []) {
+export function busyIntervals(db, masterId, dayStartMs, dayEndMs, heldSlotIds = [], excludeAppointmentId = null) {
   const intervals = [];
 
   // Записи. Только статус booked: отменённые и завершённые визиты
@@ -81,6 +83,9 @@ export function busyIntervals(db, masterId, dayStartMs, dayEndMs, heldSlotIds = 
     .all(masterId, formatUtc(new Date(dayEndMs)), formatUtc(new Date(dayStartMs)));
 
   for (const row of appointments) {
+    // Переносимая запись в момент сдвига занимает время, на которое «уедет»:
+    // её текущий интервал не должен мешать расчёту.
+    if (row.id === excludeAppointmentId) continue;
     intervals.push({
       start: Date.parse(row.starts_at),
       end: Date.parse(row.ends_at),
@@ -128,6 +133,7 @@ export function busyIntervals(db, masterId, dayStartMs, dayEndMs, heldSlotIds = 
  * @param {number} [params.durationMin] суммарная длительность услуг, минут
  * @param {number[]} [params.serviceIds] услуги: проверяются и суммируются
  * @param {object[]} [params.holds] интервалы, удерживаемые в памяти сервера
+ * @param {number} [params.excludeAppointmentId] запись, которую не считать занятой
  * @param {Date} [params.now]
  * @returns {{slots: object[], total: number, reason?: string}}
  */
@@ -139,6 +145,7 @@ export function computeFreeSlots({
   durationMin = null,
   serviceIds = null,
   holds = [],
+  excludeAppointmentId = null,
   now = new Date()
 }) {
   const empty = { slots: [], total: 0 };
@@ -200,7 +207,7 @@ export function computeFreeSlots({
 
   if (endMs <= startMs) return { ...empty, reason: 'invalid_schedule' };
 
-  const busy = busyIntervals(db, masterId, startMs, endMs, holds);
+  const busy = busyIntervals(db, masterId, startMs, endMs, holds, excludeAppointmentId);
 
   // Первый момент, который можно предложить: для сегодняшнего дня —
   // не раньше, чем через LEAD_TIME_MIN от текущего момента.

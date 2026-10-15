@@ -40,7 +40,8 @@ const state = {
     date: null,
     slot: null,
     hold: null
-  }
+  },
+  redirectAfterLogin: null
 };
 
 /* ---------------------------------------------------------------- API */
@@ -50,11 +51,27 @@ async function api(method, path, body) {
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (state.token) headers.Authorization = `Bearer ${state.token}`;
 
-  const response = await fetch(path, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body)
-  });
+  let response;
+  try {
+    response = await fetch(path, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body)
+    });
+  } catch {
+    // Сеть недоступна или соединение оборвалось: fetch отвергает промис.
+    // Возвращаем ответ той же формы, что у сервера, чтобы вызывающий код
+    // показал понятное сообщение, а экран не «завис» на загрузке.
+    return {
+      status: 0,
+      json: {
+        error: {
+          code: 'network_error',
+          message: 'Нет связи с сервером. Проверьте подключение и обновите страницу.'
+        }
+      }
+    };
+  }
 
   let json = null;
   try {
@@ -112,6 +129,25 @@ function inZone(iso, timezone, pattern = 'time') {
   return `${parts.weekday.replace('.', '')}, ${parts.day} ${parts.month}, ${parts.hour}:${parts.minute}`;
 }
 
+/* Ключ даты «ГГГГ-ММ-ДД» в часовом поясе студии. Сервер интерпретирует
+   параметр date как местную дату салона, поэтому строить его через
+   toISOString() (UTC) нельзя — для поясов восточнее UTC ключ съезжает
+   на предыдущий день. */
+function localDateKey(date, timezone) {
+  const parts = new Intl.DateTimeFormat('ru-RU', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  })
+    .formatToParts(date)
+    .reduce((acc, part) => {
+      if (part.type !== 'literal') acc[part.type] = part.value;
+      return acc;
+    }, {});
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
 /* ---------------------------------------------------------------- тосты */
 
 let toastTimer = null;
@@ -131,6 +167,7 @@ function showToast(message, kind = 'error') {
 
 function headerHtml() {
   const user = state.user;
+  const isAdmin = user && (user.roles || []).includes('admin');
   return `
     <header class="header">
       <div class="header__inner">
@@ -139,11 +176,13 @@ function headerHtml() {
           <a class="link" href="#/">Главная</a>
           <a class="link" href="#/booking">Запись</a>
           <a class="link" href="#/mine">Мои записи</a>
+          ${isAdmin ? '<a class="link" href="#/admin">Админ</a>' : ''}
         </nav>
         <div class="header__auth">
           ${
             user
-              ? `<span class="badge badge--accent">${esc(user.name)}</span>
+              ? `<a class="link notice-link" href="#/notifications" title="Уведомления">Уведомления<span class="notice-count" data-role="notice-count"></span></a>
+                 <span class="badge badge--accent">${esc(user.name)}</span>
                  <button class="btn btn--ghost btn--sm" data-action="logout">Выйти</button>`
               : `<a class="btn btn--primary btn--sm" href="#/login">Войти</a>`
           }
@@ -151,6 +190,107 @@ function headerHtml() {
       </div>
     </header>
     <div id="toast" class="toast" hidden></div>`;
+}
+
+/* ---------------------------------------------------------------- уведомления */
+
+async function refreshNoticeCount() {
+  if (!state.user) return;
+  const response = await get('/api/notifications/unread-count');
+  const count = response.json?.count ?? 0;
+
+  const badges = document.querySelectorAll('[data-role="notice-count"]');
+  badges.forEach((badge) => {
+    badge.textContent = count > 0 ? String(count) : '';
+    badge.classList.toggle('is-shown', count > 0);
+  });
+}
+
+function notificationHtml(notification, tz) {
+  const unread = notification.is_read === 0 || notification.is_read === false;
+  return `
+    <div class="notice ${unread ? 'notice--unread' : ''}" data-notice="${notification.id}">
+      <div class="notice__head">
+        <strong>${esc(notification.title)}</strong>
+        <span class="muted tiny">${inZone(notification.created_at, tz, 'full')}</span>
+      </div>
+      <p class="small">${esc(notification.message)}</p>
+      <div class="notice__actions" ${unread ? '' : 'hidden'}>
+        <button class="btn btn--ghost btn--sm" data-notice-read="${notification.id}">Прочитано</button>
+      </div>
+    </div>`;
+}
+
+async function renderNotifications() {
+  const app = document.getElementById('app');
+  if (!state.user) {
+    app.replaceChildren($$(`<div class="shell">${headerHtml()}<main class="page section">
+      <p class="muted">Чтобы видеть уведомления, <a class="link" href="#/login">войдите в аккаунт</a>.</p>
+    </main></div>`));
+    applyHeaderHandlers(app);
+    return;
+  }
+
+  app.replaceChildren($$(`<div class="shell">${headerHtml()}<main class="page section"><p class="muted">Загружаю уведомления…</p></main></div>`));
+  applyHeaderHandlers(app);
+
+  const response = await get('/api/notifications');
+  const notifications = (response.json?.notifications ?? []).sort(
+    (a, b) => new Date(b.created_at) - new Date(a.created_at)
+  );
+
+  const cards = notifications
+    .map((notification) => notificationHtml(notification, state.salon?.timezone ?? 'Europe/Moscow'))
+    .join('');
+
+  app.replaceChildren(
+    $$(`<div class="shell">${headerHtml()}<main class="page section">
+      <h1 class="block__title">Уведомления</h1>
+      ${
+        notifications.length === 0
+          ? '<p class="muted">Здесь появляются новости о ваших записях, например перенос или отмена администратором.</p>'
+          : `<div class="work-grid">${cards}</div>
+             <button class="btn btn--secondary" data-action="notice-read-all">Отметить все прочитанными</button>`
+      }
+    </main></div>`)
+  );
+  applyHeaderHandlers(app);
+
+  const readAll = app.querySelector('[data-action="notice-read-all"]');
+  if (readAll) {
+    readAll.addEventListener('click', async () => {
+      const result = await api('POST', '/api/notifications/read-all');
+      if (result.status === 200) {
+        showToast('Все уведомления прочитаны.', 'success');
+        renderNotifications();
+      }
+    });
+  }
+
+  app.querySelectorAll('[data-notice-read]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const id = Number(button.dataset.noticeRead);
+      const result = await api('POST', `/api/notifications/${id}/read`);
+      if (result.status === 200) {
+        const item = app.querySelector(`[data-notice="${id}"]`);
+        if (item) item.classList.remove('notice--unread');
+        button.closest('.notice__actions')?.setAttribute('hidden', '');
+        refreshNoticeCount();
+      }
+    });
+  });
+}
+
+function forbiddenHtml() {
+  const user = state.user;
+  return `
+    <main class="page section block">
+      <h1 class="block__title">Доступ закрыт</h1>
+      <p class="muted">Административная панель доступна только администратору.
+        Вы вошли как ${esc(user?.email ?? '')} (клиент).</p>
+      <p><a class="btn btn--primary btn--sm" href="#/">На главную</a>
+         <a class="btn btn--ghost btn--sm" href="#/mine">Мои записи</a></p>
+    </main>`;
 }
 
 /* ---------------------------------------------------------------- лендинг */
@@ -298,7 +438,7 @@ function bookingHtml() {
           ${days
             .map(
               (day) => `
-                <button class="date-chip ${b.date === day.toISOString().slice(0, 10) ? 'is-active' : ''}" data-role="day" data-date="${day.toISOString().slice(0, 10)}">
+                <button class="date-chip ${b.date === localDateKey(day, state.salon?.timezone ?? 'Europe/Moscow') ? 'is-active' : ''}" data-role="day" data-date="${localDateKey(day, state.salon?.timezone ?? 'Europe/Moscow')}">
                   ${bookingDayLabel(day, state.salon.timezone).split(',')[0]}
                   <strong>${day.getDate()} ${MONTHS[day.getMonth()]}</strong>
                 </button>`
@@ -534,41 +674,58 @@ async function renderMine() {
   app.replaceChildren($$(`<div class="shell">${headerHtml()}<main class="page section"><p class="muted">Загружаю записи…</p></main></div>`));
   applyHeaderHandlers(app);
 
-  const response = await get('/api/appointments');
-  const appointments = response.json?.appointments ?? [];
+  try {
+    if (!state.salon) {
+      const salonResp = await get('/api/salon');
+      state.salon = salonResp.json ?? null;
+    }
 
-  const cards = appointments
-    .map((appointment) => {
-      const serviceNames = appointment.services.map((s) => esc(s.name)).join(', ');
-      const statusText = {
-        booked: 'Подтверждена',
-        completed: 'Выполнена',
-        cancelled_by_client: 'Отменена клиентом',
-        cancelled_by_salon: 'Отменена салоном',
-        no_show: 'Не пришёл'
-      }[appointment.status] ?? appointment.status;
+    const response = await get('/api/appointments');
+    const appointments = response.json?.appointments ?? [];
+    const tz = state.salon?.timezone ?? 'Europe/Moscow';
 
-      return `
-        <div class="work-card">
-          <div class="summary__row"><span>${inZone(appointment.startsAt, state.salon.timezone, 'full')}</span><strong>${esc(appointment.master?.name)}</strong></div>
-          <p class="small">${serviceNames} · ${money(appointment.totalPriceRub)}</p>
-          <span class="badge ${appointment.status === 'booked' ? 'badge--success' : 'badge--muted'}">${statusText}</span>
-          ${
-            appointment.status === 'booked'
-              ? `<button class="btn btn--ghost btn--sm" data-action="cancel" data-id="${appointment.id}">Отменить</button>`
-              : ''
-          }
-        </div>`;
-    })
-    .join('');
+    const cards = appointments
+      .map((appointment) => {
+        const serviceNames = appointment.services.map((s) => esc(s.name)).join(', ');
+        const statusText = {
+          booked: 'Подтверждена',
+          completed: 'Выполнена',
+          cancelled_by_client: 'Отменена клиентом',
+          cancelled_by_salon: 'Отменена салоном',
+          no_show: 'Не пришёл'
+        }[appointment.status] ?? appointment.status;
 
-  app.replaceChildren(
-    $$(`<div class="shell">${headerHtml()}<main class="page section">
-      <h1 class="block__title">Мои записи</h1>
-      ${appointments.length === 0 ? '<p class="muted">Записей пока нет. <a class="link" href="#/booking">Записаться</a></p>' : `<div class="work-grid">${cards}</div>`}
-    </main></div>`)
-  );
-  applyHeaderHandlers(app);
+        return `
+          <div class="work-card">
+            <div class="summary__row"><span>${inZone(appointment.startsAt, tz, 'full')}</span><strong>${esc(appointment.master?.name)}</strong></div>
+            <p class="small">${serviceNames} · ${money(appointment.totalPriceRub)}</p>
+            <span class="badge ${appointment.status === 'booked' ? 'badge--success' : 'badge--muted'}">${statusText}</span>
+            ${
+              appointment.status === 'booked'
+                ? `<button class="btn btn--ghost btn--sm" data-action="cancel" data-id="${appointment.id}">Отменить</button>`
+                : ''
+            }
+          </div>`;
+      })
+      .join('');
+
+    app.replaceChildren(
+      $$(`<div class="shell">${headerHtml()}<main class="page section">
+        <h1 class="block__title">Мои записи</h1>
+        ${appointments.length === 0 ? '<p class="muted">Записей пока нет. <a class="link" href="#/booking">Записаться</a></p>' : `<div class="work-grid">${cards}</div>`}
+      </main></div>`)
+    );
+    applyHeaderHandlers(app);
+    if (state.user) refreshNoticeCount();
+  } catch (error) {
+    showToast('Не удалось загрузить записи. Обновите страницу.');
+    app.replaceChildren(
+      $$(`<div class="shell">${headerHtml()}<main class="page section">
+        <p class="muted">Не удалось загрузить записи. Перейдите на <a class="link" href="#/">главную</a>.</p>
+      </main></div>`)
+    );
+    applyHeaderHandlers(app);
+  }
 }
 
 /* ---------------------------------------------------------------- вход */
@@ -715,9 +872,12 @@ async function renderLoginView() {
     if (response.status === 200 || response.status === 201) {
       state.token = response.json.token;
       state.user = response.json.user;
+      state.booking = { serviceIds: [], masterId: null, date: null, slot: null, hold: null };
       localStorage.setItem(storageTokenKey, state.token);
       showToast(`Добро пожаловать, ${state.user.name}!`, 'success');
-      location.hash = '#/';
+      const target = state.redirectAfterLogin || '#/';
+      state.redirectAfterLogin = null;
+      location.hash = target;
     } else {
       showToast(response.json?.error?.message ?? 'Не удалось войти.');
     }
@@ -742,6 +902,7 @@ function applyHeaderHandlers(app) {
       const id = Number(button.dataset.id);
       const response = await api('POST', `/api/appointments/${id}/cancel`, {});
       if (response.json?.appointment?.id) {
+        const tz = state.salon?.timezone ?? 'Europe/Moscow';
         showToast('Запись отменена.', 'success');
         renderMine();
       } else {
@@ -751,17 +912,69 @@ function applyHeaderHandlers(app) {
   });
 }
 
-async function route() {
-  if (!state.salon && !state.user) {
-    const me = state.token ? await get('/api/auth/me') : { status: 401 };
-    if (me.status === 200) state.user = me.json.user;
+function renderLoadError() {
+  const app = document.getElementById('app');
+  showToast('Не удалось загрузить страницу. Проверьте подключение и обновите страницу.');
+  app.replaceChildren(
+    $$(`<div class="shell">${headerHtml()}<main class="page section">
+      <h1 class="block__title">Страница не загрузилась</h1>
+      <p class="muted">Не удалось получить данные с сервера. Проверьте подключение и обновите страницу.</p>
+      <p><a class="btn btn--primary btn--sm" href="#/">На главную</a></p>
+    </main></div>`)
+  );
+  applyHeaderHandlers(app);
+}
+
+async function adminRoute() {
+  const app = document.getElementById('app');
+
+  if (!state.user) {
+    state.redirectAfterLogin = '#/admin';
+    renderLoginView();
+    return;
   }
 
-  const hash = (location.hash || '#/').replace(/^#/, '');
-  if (hash.startsWith('/booking')) renderBookingView();
-  else if (hash.startsWith('/mine')) renderMine();
-  else if (hash.startsWith('/login')) renderLoginView();
-  else renderLandingView();
+  if (!(state.user.roles || []).includes('admin')) {
+    app.replaceChildren($$(`<div class="shell">${headerHtml()}${forbiddenHtml()}</div>`));
+    applyHeaderHandlers(app);
+    return;
+  }
+
+  if (window.__topbroAdmin) {
+    window.__topbroAdmin.renderAdmin(app);
+    return;
+  }
+
+  app.replaceChildren(
+    $$(`<div class="shell">${headerHtml()}<main class="page section">
+        <p class="muted">Раздел не загрузился. Обновите страницу, удерживая Ctrl+F5.</p>
+      </main></div>`)
+  );
+  applyHeaderHandlers(app);
+}
+
+async function route() {
+  try {
+    if (!state.salon && !state.user) {
+      const me = state.token ? await get('/api/auth/me') : { status: 401 };
+      if (me.status === 200) state.user = me.json.user;
+    }
+
+    const hash = (location.hash || '#/').replace(/^#/, '');
+    // Представления перерисовывают DOM асинхронно: счётчик уведомлений
+    // обновляем только после финальной отрисовки, иначе новый шапка-бейдж
+    // останется пустым.
+    if (hash.startsWith('/booking')) await renderBookingView();
+    else if (hash.startsWith('/mine')) await renderMine();
+    else if (hash.startsWith('/notifications')) await renderNotifications();
+    else if (hash.startsWith('/admin')) await adminRoute();
+    else if (hash.startsWith('/login')) await renderLoginView();
+    else await renderLandingView();
+
+    if (state.user) refreshNoticeCount().catch(() => {});
+  } catch (error) {
+    renderLoadError();
+  }
 }
 
 window.addEventListener('hashchange', route);

@@ -13,14 +13,29 @@
  * не даёт авторизованному пользователю открыть чужую запись.
  */
 
-import { badRequest, forbidden, notFound } from '../errors.js';
-import { isAdmin, canAccessAppointment } from '../auth.js';
+import { badRequest, conflict, forbidden, notFound } from '../errors.js';
+import { isAdmin, canAccessAppointment, requireRole } from '../auth.js';
 import { validate, cleanText } from '../validate.js';
 import { acquireHold, extendHold, holdsForMaster, releaseHold } from '../holds.js';
-import { formatUtc, isValidDateString } from '../time.js';
+import { formatUtc, isValidDateString, utcToZonedParts } from '../time.js';
+import { computeFreeSlots } from '../slots.js';
 import { getSalon } from '../repo/catalog.js';
 import { masterIdForUser } from '../repo/users.js';
-import { cancelAppointment, createAppointment, dayBoundsUtc, getAppointment, listAppointments } from '../repo/appointments.js';
+import { createNotification } from '../repo/notifications.js';
+import {
+  cancelAppointment,
+  createAppointment,
+  dayBoundsUtc,
+  getAppointment,
+  listAppointments,
+  rescheduleAppointment
+} from '../repo/appointments.js';
+import {
+  cancelledNotification,
+  createdNotification,
+  overrideNotification,
+  rescheduledNotification
+} from '../notify.js';
 import { ownerKeyOf, parseIntParam, pathId } from './helpers.js';
 
 const APPOINTMENT_STATUSES = ['booked', 'completed', 'cancelled_by_client', 'cancelled_by_salon', 'no_show'];
@@ -88,6 +103,15 @@ export function registerAppointmentRoutes(router) {
         // время свободным для себя.
         holds: holdsForMaster(data.masterId, ownerKeyOf(session, req))
       });
+
+      // Если запись создал не сам клиент (мастер или администратор записал
+      // другого человека), сообщаем клиенту об этом уведомлением.
+      if (clientId !== session.user.id) {
+        const note = isOverride
+          ? overrideNotification(appointment, salon.timezone)
+          : createdNotification(appointment, salon.timezone, { byAdmin: true });
+        createNotification(db, { userId: clientId, appointmentId: appointment.id, ...note });
+      }
 
       return { status: 201, payload: { appointment: publicAppointment(appointment, salon.timezone) } };
     },
@@ -204,6 +228,98 @@ export function registerAppointmentRoutes(router) {
 
       const updated = cancelAppointment(db, appointment, { bySalon, reason });
       const salon = getSalon(db);
+
+      // Клиенту сообщаем только о записях, отменённых за него администратором
+      // или мастером. Свою отмену он совершил сам — уведомление излишне.
+      if (bySalon && updated.client_id !== session.user.id) {
+        const note = cancelledNotification(updated, salon.timezone, { reason });
+        createNotification(db, { userId: updated.client_id, appointmentId: updated.id, ...note });
+      }
+
+      return { payload: { appointment: publicAppointment(updated, salon.timezone) } };
+    },
+    AUTH
+  );
+
+  /** Перенос записи. Доступен только администратору. */
+  router.post(
+    '/api/appointments/:id/reschedule',
+    async ({ db, params, body, session }) => {
+      // «Кто пришёл» проверено (маршрут с auth), «какая роль» — здесь.
+      requireRole(session, 'admin');
+
+      const id = pathId(params, 'id');
+      if (id === null) throw badRequest('Некорректный идентификатор записи.');
+
+      const appointment = getAppointment(db, id);
+      if (!appointment) throw notFound('Запись не найдена.');
+
+      if (appointment.status !== 'booked') {
+        throw badRequest(`Перенести можно только активную запись, а её статус сейчас ${appointment.status}.`);
+      }
+
+      const data = validate(body, {
+        startsAt: { type: 'string', required: true, max: 32 },
+        isOverride: { type: 'boolean', required: false, default: false }
+      });
+
+      const startsAt = new Date(data.startsAt);
+      if (Number.isNaN(startsAt.getTime())) {
+        throw badRequest('Некорректное время начала визита. Ожидается 2026-09-28T12:00:00Z.');
+      }
+      if (startsAt.getTime() < Date.now()) {
+        throw badRequest('Нельзя перенести запись на время в прошлом.');
+      }
+
+      const salon = getSalon(db);
+      if (!salon) throw notFound('Студия не настроена. Выполните npm run seed.');
+
+      const wanted = formatUtc(startsAt);
+      // Перенос на то же время — не перенос, ничего не меняем.
+      if (wanted === appointment.starts_at) {
+        return { payload: { appointment: publicAppointment(appointment, salon.timezone) } };
+      }
+
+      const durationMin = appointment.totalDurationMin;
+      const local = utcToZonedParts(startsAt, salon.timezone);
+
+      const computed = computeFreeSlots({
+        db,
+        masterId: appointment.master_id,
+        date: local.date,
+        timezone: salon.timezone,
+        durationMin,
+        holds: [],
+        excludeAppointmentId: appointment.id
+      });
+
+      const available = computed.slots.find((slot) => slot.startsAt === wanted);
+
+      if (!available && !data.isOverride) {
+        throw conflict(
+          'slot_unavailable',
+          'Это время больше недоступно. Выберите другой слот.',
+          {
+            reason: computed.reason ?? 'slot_taken',
+            requested: wanted,
+            totalDurationMin: durationMin,
+            availableSlots: computed.slots.slice(0, 12)
+          }
+        );
+      }
+
+      const endsAtIso = available
+        ? available.endsAt
+        : formatUtc(new Date(startsAt.getTime() + durationMin * 60_000));
+
+      const updated = rescheduleAppointment(db, id, {
+        startsAtIso: wanted,
+        endsAtIso,
+        isOverride: !available
+      });
+
+      const note = rescheduledNotification(updated, salon.timezone);
+      createNotification(db, { userId: updated.client_id, appointmentId: updated.id, ...note });
 
       return { payload: { appointment: publicAppointment(updated, salon.timezone) } };
     },

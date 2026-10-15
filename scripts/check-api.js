@@ -565,6 +565,246 @@ async function main() {
     check('в базе действительно одна запись на это время', inDb.n === 1, `записей ${inDb.n}`);
   }
 
+  // ------------------------------------------------------------------ перенос записи
+  section('Администратор: перенос записи');
+
+  {
+    const clientId = fixtures.clientIds[0];
+
+    const created = await api('POST', '/api/appointments', {
+      token: adminToken,
+      body: { masterId, serviceIds: [service60], startsAt: formatUtc(nextMonday(13)), clientId }
+    });
+    check('администратор создаёт запись клиенту для переноса', created.status === 201, `статус ${created.status}`);
+    const appointmentId = created.json.appointment.id;
+
+    const byClient = await api('POST', `/api/appointments/${appointmentId}/reschedule`, {
+      token: olegToken,
+      body: { startsAt: formatUtc(nextMonday(13, 30)) }
+    });
+    check('клиент не может переносить записи', byClient.status === 403, `статус ${byClient.status}`);
+
+    const movedTo = formatUtc(nextMonday(11));
+    const moved = await api('POST', `/api/appointments/${appointmentId}/reschedule`, {
+      token: adminToken,
+      body: { startsAt: movedTo }
+    });
+    check(
+      'администратор переносит запись на свободный слот',
+      moved.status === 200 && moved.json.appointment.startsAt === movedTo,
+      `статус ${moved.status}: ${moved.text.slice(0, 120)}`
+    );
+    check('перенос сохраняет услуги и цену', moved.json?.appointment?.totalPriceRub === 2500);
+
+    const occupied = formatUtc(nextMonday(14));
+    const conflict = await api('POST', `/api/appointments/${appointmentId}/reschedule`, {
+      token: adminToken,
+      body: { startsAt: occupied }
+    });
+    check('перенос на занятое время без isOverride даёт 409', conflict.status === 409, `статус ${conflict.status}`);
+
+    const forced = await api('POST', `/api/appointments/${appointmentId}/reschedule`, {
+      token: adminToken,
+      body: { startsAt: occupied, isOverride: true }
+    });
+    check('с isOverride администратор накладывает перенос', forced.status === 200 && forced.json.appointment.startsAt === occupied);
+    check('наложенный перенос помечен как исключение', forced.json.appointment.isOverride === true);
+
+    const same = await api('POST', `/api/appointments/${appointmentId}/reschedule`, {
+      token: adminToken,
+      body: { startsAt: occupied }
+    });
+    check('перенос на текущее время ничего не меняет', same.status === 200 && same.json.appointment.startsAt === occupied);
+  }
+
+  // ------------------------------------------------------------------ уведомления
+  section('Уведомления');
+
+  {
+    const before = await api('GET', '/api/notifications/unread-count', { token: olegToken });
+
+    // Клиент записался сам — уведомление о собственной записи не нужно.
+    const selfBooking = await api('POST', '/api/appointments', {
+      token: olegToken,
+      ip: '10.0.4.2',
+      body: { masterId, serviceIds: [service60], startsAt: formatUtc(nextMonday(16, 30)) }
+    });
+    check('клиент записался на свободный слот', selfBooking.status === 201, `статус ${selfBooking.status}`);
+
+    const afterSelf = await api('GET', '/api/notifications/unread-count', { token: olegToken });
+    check(
+      'о собственной записи уведомление не приходит',
+      afterSelf.json.count === before.json.count,
+      `было ${before.json.count}, стало ${afterSelf.json.count}`
+    );
+
+    // Администратор отменяет запись клиента — уведомление приходит.
+    const reason = 'Не успеваем по графику';
+    const cancelledByAdmin = await api('POST', `/api/appointments/${selfBooking.json.appointment.id}/cancel`, {
+      token: adminToken,
+      body: { reason }
+    });
+    check(
+      'администратор отменяет чужую запись',
+      cancelledByAdmin.status === 200 && cancelledByAdmin.json.appointment.status === 'cancelled_by_salon',
+      `статус ${cancelledByAdmin.status}`
+    );
+
+    const afterCancel = await api('GET', '/api/notifications/unread-count', { token: olegToken });
+    check(
+      'об отмене уведомление пришло',
+      afterCancel.json.count === before.json.count + 1,
+      `было ${before.json.count}, стало ${afterCancel.json.count}`
+    );
+
+    const list = await api('GET', '/api/notifications?unread=1', { token: olegToken });
+    const newest = list.json.notifications[0];
+    check('уведомление об отмене пришло первым в списке', newest?.kind === 'appointment_cancelled', newest?.kind);
+    check('причина отмены попала в текст', newest?.message.includes(reason), newest?.message);
+    check('в уведомлении есть адресованная запись', newest?.appointmentStartsAt !== null);
+
+    // Чужое уведомление прочитать нельзя, своё — можно.
+    const annaList = await api('GET', '/api/notifications', { token: annaToken });
+    check('клиент видит только свои уведомления', list.json.notifications.every((n) => n.id));
+
+    const foreignRead = await api('POST', `/api/notifications/${newest.id}/read`, { token: annaToken });
+    check('чужое уведомление прочитать нельзя (404)', foreignRead.status === 404, `статус ${foreignRead.status}`);
+
+    const ownRead = await api('POST', `/api/notifications/${newest.id}/read`, { token: olegToken });
+    check('своё уведомление прочитано', ownRead.status === 200 && ownRead.json.ok === true);
+
+    const afterRead = await api('GET', '/api/notifications/unread-count', { token: olegToken });
+    check('счётчик уменьшился после чтения', afterRead.json.count === before.json.count, `стало ${afterRead.json.count}`);
+
+    const readAll = await api('POST', '/api/notifications/read-all', { token: olegToken });
+    check('все уведомления отмечаются прочитанными', readAll.status === 200);
+    const zero = await api('GET', '/api/notifications/unread-count', { token: olegToken });
+    check('непрочитанных не осталось', zero.json.count === 0, `осталось ${zero.json.count}`);
+  }
+
+  // ------------------------------------------------------------------ административный раздел
+  section('Административный раздел');
+
+  {
+    const guest = await api('GET', '/api/admin/services');
+    check('админ-раздел без токена даёт 401', guest.status === 401, `статус ${guest.status}`);
+
+    const asClient = await api('GET', '/api/admin/services', { token: olegToken });
+    check('клиенту админ-раздел недоступен (403)', asClient.status === 403, `статус ${asClient.status}`);
+
+    const services = await api('GET', '/api/admin/services', { token: adminToken });
+    check('админ видит все услуги', services.status === 200 && services.json.services.length === 3);
+
+    const created = await api('POST', '/api/admin/services', {
+      token: adminToken,
+      body: { name: 'Укладка', durationMin: 30, priceRub: 1500 }
+    });
+    check('услуга создана', created.status === 201 && created.json.service.name === 'Укладка', `статус ${created.status}`);
+
+    const off = await api('PATCH', `/api/admin/services/${created.json.service.id}`, {
+      token: adminToken,
+      body: { isActive: false }
+    });
+    check('услугу можно отключить', off.status === 200 && off.json.service.isActive === false);
+
+    const publicList = await api('GET', '/api/services');
+    check('отключённая услуга пропала из публичного списка', publicList.status === 200 && publicList.json.services.length === 3);
+
+    const backOn = await api('PATCH', `/api/admin/services/${created.json.service.id}`, {
+      token: adminToken,
+      body: { isActive: true }
+    });
+    check('услуга снова включена', backOn.status === 200 && backOn.json.service.isActive === true);
+
+    const missing = await api('PATCH', '/api/admin/services/999999', { token: adminToken, body: { name: 'X' } });
+    check('правка несуществующей услуги даёт 404', missing.status === 404);
+
+    const bad = await api('POST', '/api/admin/services', {
+      token: adminToken,
+      body: { name: 'X', durationMin: 2, priceRub: 100 }
+    });
+    check('услуга с малой длительностью отклонена', bad.status === 400);
+
+    const clients = await api('GET', '/api/admin/clients', { token: adminToken });
+    check(
+      'список клиентов для записи отдан',
+      clients.status === 200 && clients.json.clients.some((client) => client.email === 'anna@example.com')
+    );
+  }
+
+  {
+    const masters = await api('GET', '/api/admin/masters', { token: adminToken });
+    check(
+      'админ видит мастеров с графиком',
+      masters.status === 200 && masters.json.masters[0]?.schedule.length === 7,
+      `мастеров ${masters.json.masters?.length}`
+    );
+
+    const schedule = [1, 2, 3, 4, 5].map((weekday) => ({
+      weekday,
+      startTime: '10:00',
+      endTime: '19:00',
+      isWorking: true
+    }));
+
+    const created = await api('POST', '/api/admin/masters', {
+      token: adminToken,
+      body: {
+        email: 'boris@example.com',
+        name: 'Борис Кружкин',
+        password: 'Boris2026!',
+        specialization: 'Барбер · классика',
+        serviceIds: [service60],
+        schedule
+      }
+    });
+    check('мастер создан', created.status === 201, `статус ${created.status}: ${created.text.slice(0, 120)}`);
+    const masterId2 = created.json.master?.id;
+
+    const publicMasters = await api('GET', '/api/masters');
+    check('новый мастер появился в публичном каталоге', publicMasters.json.masters.some((master) => master.id === masterId2));
+
+    const duplicate = await api('POST', '/api/admin/masters', {
+      token: adminToken,
+      body: { email: 'boris@example.com', name: 'Дубль', password: 'Boris2026!', specialization: 'Барбер' }
+    });
+    check('мастер с занятой почтой отклонён (409)', duplicate.status === 409, `статус ${duplicate.status}`);
+
+    const patched = await api('PATCH', `/api/admin/masters/${masterId2}`, {
+      token: adminToken,
+      body: { specialization: 'Топ-барбер', isActive: false }
+    });
+    check(
+      'профиль мастера обновлён',
+      patched.status === 200 && patched.json.master.specialization === 'Топ-барбер',
+      `статус ${patched.status}`
+    );
+
+    const afterOff = await api('GET', '/api/masters');
+    check('выключенный мастер пропал из публичного каталога', !afterOff.json.masters.some((master) => master.id === masterId2));
+
+    const servicesSet = await api('PUT', `/api/admin/masters/${masterId2}/services`, {
+      token: adminToken,
+      body: { serviceIds: [service90] }
+    });
+    check(
+      'набор услуг мастера заменён',
+      servicesSet.status === 200 && servicesSet.json.master.services.map((service) => service.id).join(',') === String(service90)
+    );
+
+    const scheduleSet = await api('PUT', `/api/admin/masters/${masterId2}/schedule`, {
+      token: adminToken,
+      body: { schedule: [{ weekday: 6, startTime: '11:00', endTime: '18:00', isWorking: true }] }
+    });
+    check('график мастера заменён', scheduleSet.status === 200 && scheduleSet.json.master.schedule.length === 1);
+
+    const brokenSchedule = await api('PUT', `/api/admin/masters/${masterId2}/schedule`, {
+      token: adminToken,
+      body: { schedule: [{ weekday: 6, startTime: '18:00', endTime: '11:00', isWorking: true }] }
+    });
+    check('график с концом раньше начала отклонён', brokenSchedule.status === 400, `статус ${brokenSchedule.status}`);
+  }
+
   // ------------------------------------------------------------------ выход и заголовки
   section('Выход, заголовки, маршруты');
 

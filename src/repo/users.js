@@ -30,6 +30,39 @@ export function masterIdForUser(db, userId) {
   return row ? row.id : null;
 }
 
+/** Клиенты для выбора в административном разделе при записи. */
+export function listClientsForAdmin(db) {
+  return db
+    .prepare(
+      `SELECT DISTINCT u.id, u.email, u.name, u.phone
+         FROM users u
+         JOIN user_roles r ON r.user_id = u.id AND r.role = 'client'
+        WHERE u.is_active = 1
+        ORDER BY u.name`
+    )
+    .all();
+}
+
+/** Обновляет имя и/или телефон в профиле пользователя. */
+export function updateUserProfile(db, id, { name, phone }) {
+  const sets = [];
+  const values = [];
+
+  if (name !== undefined) {
+    sets.push('name = ?');
+    values.push(name);
+  }
+  if (phone !== undefined) {
+    sets.push('phone = ?');
+    values.push(phone ?? null);
+  }
+
+  if (sets.length > 0) {
+    db.prepare(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`).run(...values, id);
+  }
+  return findById(db, id);
+}
+
 /**
  * Создаёт пользователя с ролью клиента.
  *

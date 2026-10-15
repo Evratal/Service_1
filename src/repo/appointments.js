@@ -259,6 +259,26 @@ export function cancelAppointment(db, appointment, { bySalon, reason = null }) {
   return getAppointment(db, appointment.id);
 }
 
+/**
+ * Переносит запись на другое время.
+ *
+ * Новые границы уже проверены в маршруте (слот должен быть свободным либо
+ * перенос осознанно выполнен с наложением). Здесь — только изменение. Финал
+ * по-прежнему контролирует триггер: при наложении без is_override он
+ * вернёт ошибку, даже если проверка в маршруте пропустила конфликт.
+ *
+ * @returns {object} обновлённая запись
+ */
+export function rescheduleAppointment(db, id, { startsAtIso, endsAtIso, isOverride = false }) {
+  withTransaction(db, () => {
+    db.prepare(
+      'UPDATE appointments SET starts_at = ?, ends_at = ?, is_override = ? WHERE id = ?'
+    ).run(startsAtIso, endsAtIso, isOverride ? 1 : 0, id);
+  });
+
+  return getAppointment(db, id);
+}
+
 /** Создаёт разовую блокировку времени мастера. */
 export function createTimeBlock(db, { masterId, startsAtIso, endsAtIso, reason, createdBy }) {
   const id = withTransaction(db, () =>
