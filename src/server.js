@@ -4,37 +4,35 @@
  *   npm start     — обычный запуск
  *   npm run dev   — запуск с автоперезагрузкой при изменении файлов
  *
- * Порядок запуска важен: сначала проверяется, что миграции применены,
- * и только потом открывается порт. Иначе сервер поднимется с пустой базой
- * и начнёт отвечать 500 на всё подряд.
+ * Порядок запуска важен: сначала применяются миграции, и только потом
+ * открывается порт. Иначе сервер поднимется с пустой базой и начнёт отвечать
+ * 500 на всё подряд. На сервере применять миграции руками некому — обновление
+ * приезжает само после коммита, поэтому приложение делает это при старте,
+ * до того как начнёт отвечать на запросы.
  */
 
 import { createServer } from 'node:http';
 
 import { config } from './config.js';
 import { openDatabase } from './db.js';
+import { applyMigrations } from './migrations.js';
 import { createApp } from './app.js';
 import { pruneTokens } from './auth.js';
 import { pruneLoginAttempts } from './repo/users.js';
 
-const MIGRATION_CHECK = 'SELECT COUNT(*) AS n FROM schema_migrations';
-
-function assertMigrated(db) {
-  try {
-    const { n } = db.prepare(MIGRATION_CHECK).get();
-    if (n === 0) {
-      throw new Error('В базе нет применённых миграций');
-    }
-  } catch (error) {
-    console.error(`\nБаза не готова: ${error.message}`);
-    console.error('Выполните:  npm run db:reset\n');
-    process.exit(1);
-  }
-}
-
 function main() {
   const db = openDatabase();
-  assertMigrated(db);
+
+  try {
+    const applied = applyMigrations(db);
+    if (applied.length > 0) {
+      console.log(`Применено миграций: ${applied.length} (${applied.join(', ')}).`);
+    }
+  } catch (error) {
+    console.error(`\nБаза не готова: ${error.message}\n`);
+    db.close();
+    process.exit(1);
+  }
 
   // Уборка при старте: просроченные токены и старый журнал попыток входа,
   // чтобы таблицы auth_tokens и login_attempts не росли бесконечно.

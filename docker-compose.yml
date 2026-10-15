@@ -1,0 +1,28 @@
+# Описание запуска сервиса для Coolify (и для локального docker compose).
+#
+# Coolify собирает образ по Dockerfile из этого же каталога и поднимает
+# сервис. Файл базы живёт в томе app_data, смонтированном в /app/data,
+# поэтому данные переживают пересборку и повторный деплой.
+
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DB_FILE: /app/data/app.db
+      TOKEN_TTL_HOURS: "24"
+      RATE_LIMIT_ATTEMPTS: "5"
+      RATE_LIMIT_WINDOW_MIN: "15"
+      HOLD_TTL_SEC: "300"
+      # Сервис стоит за прокси Coolify: доверяем заголовку X-Forwarded-For,
+      # чтобы ограничение попыток входа считалось по реальному адресу клиента.
+      TRUST_PROXY: "1"
+    expose:
+      - "3000"
+    volumes:
+      - app_data:/app/data
+
+volumes:
+  app_data:
