@@ -299,6 +299,7 @@ function landingHtml() {
   const s = state.salon ?? {};
   return `
     <main class="page section">
+      <div class="study-banner"><div class="study-banner__inner">Учебный сервис. Все данные вымышленные — не вводите настоящие.</div></div>
       <section class="block">
         <p class="eyebrow">Барбершоп · Москва</p>
         <h1 class="hero__title">Запись к мастеру <em>за 30 секунд</em></h1>
