@@ -302,7 +302,7 @@ function landingHtml() {
       <section class="block">
         <p class="eyebrow">Барбершоп · Москва</p>
         <h1 class="hero__title">Запись к мастеру <em>за 30 секунд</em></h1>
-        <p class="muted">Выберите услугу, мастера и удобное время. Без звонков и переписки.</p>
+        <p class="muted">Выберите услугу, мастера и удобное время. Без звонков, переписки и ожидания.</p>
         <div class="hero__facts">
           <div class="hero__fact"><strong id="hsalon-hours">${esc(s.workStart) ?? '10:00'}–${esc(s.workEnd) ?? '22:00'}</strong><span>ежедневно</span></div>
           <div class="hero__fact"><strong id="hsalon-masters">${state.masters.length}</strong><span>мастера в сети</span></div>
