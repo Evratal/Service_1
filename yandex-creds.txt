@@ -1,0 +1,4 @@
+﻿YANDEX_CLIENT_ID=8869b8c737b342ae8c976d52bf2f7816
+YANDEX_CLIENT_SECRET=db63097bccec42559c67573abfbeefb3
+PUBLIC_BASE_URL=https://nogotochki.portfolio-evratal-1.ru
+REDIRECT=https://nogotochki.portfolio-evratal-1.ru/api/auth/yandex/callback
