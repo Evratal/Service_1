@@ -1,0 +1,22 @@
+{
+  "name": "nogotochki-booking",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Сервис онлайн-записи в бьюти-студию «Ноготочки»: бэкенд, SQLite и клиентский интерфейс",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "migrate": "node scripts/migrate.js",
+    "seed": "node scripts/seed.js",
+    "db:reset": "node scripts/migrate.js --fresh && node scripts/seed.js",
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "check": "node scripts/check.js && node scripts/check-api.js && node scripts/check-yandex.js",
+    "check:web": "node scripts/check-web.js",
+    "check:yandex": "node scripts/check-yandex.js"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

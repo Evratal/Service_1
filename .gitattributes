@@ -1,0 +1,25 @@
+# Файл настраивается один раз и действует на протяжении всей работы.
+# Задача — одинаково обрабатывать переносы строк на всех компьютерах
+# и не пытаться считать текст разных бинарных файлов различиями.
+
+* text=auto eol=lf
+
+# --- Бинарные файлы: Git не должен пытаться показывать их различия ---
+*.docx   binary
+*.xlsx   binary
+*.pdf    binary
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.ico    binary
+*.sqlite binary
+*.db     binary
+
+# --- Файлы базы данных: всегда бинарные, даже с ошибочным расширением ---
+data/** binary
+*.db-wal binary
+*.db-shm binary
+
+# --- Сгенерированное: в репозитории не хранится ---
+node_modules/** linguist-vendored
+package-lock.json linguist-generated=true -diff
